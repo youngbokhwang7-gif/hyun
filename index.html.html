@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#2E6BFF">
+<title>현장콜 · 인테리어 기사 매칭</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF;--bg2:#F2F6FF;--card:#FFFFFF;--line:#E3E9F2;
+    --ink:#15202B;--sub:#6B7785;
+    --blue:#2E6BFF;--blue-d:#1B4FD6;--blue-soft:#EAF1FF;--teal:#00C2A8;
+    --ok:#16B364;--ok-d:#0E8E4D;--danger:#F0436A;
+    --radius:16px;--shadow:0 4px 18px rgba(46,107,255,.10);--shadow-lg:0 10px 34px rgba(21,32,43,.14);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+  header{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--bg);border-bottom:1px solid var(--line);}
+  .logo{font-weight:800;font-size:21px;letter-spacing:-.6px;display:flex;align-items:center;gap:9px;color:var(--ink);}
+  .logo .mk{width:29px;height:29px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--teal));display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);}
+  .logo .mk svg{width:18px;height:18px;}
+  .logo small{font-weight:700;color:var(--blue);font-size:10px;background:var(--blue-soft);padding:2px 7px;border-radius:6px;letter-spacing:.3px;}
+  .demo-flag{margin-left:auto;font-size:10px;color:#fff;background:linear-gradient(135deg,var(--blue),var(--blue-d));font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.4px;}
+  .homeBtn{margin-left:10px;background:var(--bg2);border:1px solid var(--line);color:var(--ink);font-size:17px;font-weight:700;padding:11px 20px;border-radius:24px;cursor:pointer;}
+  .homeBtn:active{transform:translateY(1px);}
+  .screen{flex:1 1 auto;display:none;flex-direction:column;min-height:0;}
+  .screen.active{display:flex;}
+  #login{overflow-y:auto;padding:28px 24px 32px;}
+  .hero-art{width:100%;height:150px;border-radius:20px;margin-bottom:22px;background:linear-gradient(135deg,#3E78FF,#2E6BFF 55%,#1B4FD6);position:relative;overflow:hidden;box-shadow:var(--shadow-lg);display:flex;align-items:flex-end;}
+  .hero-art .grid{position:absolute;inset:0;opacity:.18;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:26px 26px;}
+  .hero-art .machines{display:flex;gap:6px;align-items:flex-end;padding:0 16px 14px;width:100%;justify-content:space-around;position:relative;z-index:1;}
+  .hero-art .machines svg{height:66px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.22));}
+  .hero{font-size:25px;font-weight:800;letter-spacing:-1px;line-height:1.28;margin-bottom:8px;}
+  .hero b{color:var(--blue);}
+  .hero-sub{color:var(--sub);font-size:14px;margin-bottom:24px;line-height:1.55;}
+  label.fld{display:block;font-size:14px;color:var(--ink);margin:0 0 9px 3px;font-weight:800;}
+  input[type=tel],input[type=text]{width:100%;padding:16px;font-size:16px;border-radius:14px;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);outline:none;transition:.15s;}
+  #phone{min-height:44px;padding:10px 16px;font-size:30px;font-weight:800;text-align:center;letter-spacing:1px;color:var(--blue);border:1.5px solid var(--blue);}
+  #phone::placeholder{color:#9DBBF5;}
+  input::placeholder{color:#A9B4C0;}
+  input:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft);}
+  .role-row{display:flex;gap:12px;margin-top:18px;}
+  .role{flex:1;padding:18px 10px;border-radius:16px;border:1.5px solid var(--blue);background:var(--card);text-align:center;cursor:pointer;transition:.16s;box-shadow:0 2px 8px rgba(21,32,43,.04);}
+  .role .ic{height:46px;display:flex;align-items:center;justify-content:center;}
+  .role .ic svg{height:42px;}
+  .role .t{font-weight:800;margin-top:8px;font-size:15px;}
+  .role .d{font-size:11.5px;color:var(--sub);margin-top:2px;}
+  .role.sel{border-color:var(--blue);background:var(--blue-soft);box-shadow:var(--shadow);}
+  .role.sel .t{color:var(--blue-d);}
+  .btn{width:100%;padding:17px;font-size:16px;font-weight:800;border:none;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;cursor:pointer;margin-top:20px;box-shadow:var(--shadow);transition:.15s;letter-spacing:-.2px;}
+  .btn:active{transform:translateY(1px);}
+  .btn[disabled]{opacity:.4;cursor:default;box-shadow:none;}
+  .btn.ghost{background:var(--bg2);color:var(--ink);box-shadow:none;}
+  .btn-start{width:40%;min-width:160px;display:block;margin-left:auto;margin-right:auto;background:linear-gradient(135deg,#F2730C,#D85A00);box-shadow:0 4px 16px rgba(216,90,0,.38);}
+  .btn-start[disabled]{box-shadow:none;}
+  .note{font-size:11.5px;color:var(--sub);text-align:center;margin-top:16px;line-height:1.55;}
+  #equip{overflow-y:auto;padding:28px 24px;}
+  .equip-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:18px;}
+  .equip{flex:1;padding:16px 6px 14px;border-radius:16px;border:1.5px solid var(--line);background:var(--card);text-align:center;cursor:pointer;transition:.16s;box-shadow:0 2px 8px rgba(21,32,43,.04);}
+  .equip .ic{height:56px;display:flex;align-items:center;justify-content:center;}
+  .equip .ic svg{height:50px;}
+  .equip .t{font-size:13.5px;font-weight:800;margin-top:6px;}
+  .equip.sel{border-color:var(--blue);background:var(--blue-soft);box-shadow:var(--shadow);}
+  .equip.sel .t{color:var(--blue-d);}
+  .map-wrap{flex:1 1 auto;position:relative;min-height:0;display:flex;}
+  #map{flex:1 1 auto;width:100%;background:#E8EEF6;z-index:0;}
+  .status-pill{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:500;background:#fff;border:1px solid var(--line);padding:9px 15px;border-radius:30px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-lg);white-space:nowrap;}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,179,100,.5);}70%{box-shadow:0 0 0 9px rgba(22,179,100,0);}100%{box-shadow:0 0 0 0 rgba(22,179,100,0);}}
+  .recenter{position:absolute;right:14px;bottom:calc(var(--sheet-h,220px) + 14px);z-index:500;width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--line);color:var(--blue);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-lg);transition:bottom .25s;}
+  .sheet{flex:0 0 auto;background:#fff;border-top:1px solid var(--line);border-radius:22px 22px 0 0;padding:8px 18px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(21,32,43,.10);max-height:48dvh;overflow-y:auto;}
+  .grab{width:38px;height:4px;border-radius:4px;background:var(--line);margin:6px auto 12px;}
+  .sheet h3{margin:0 0 3px;font-size:16.5px;font-weight:800;display:flex;align-items:center;gap:8px;letter-spacing:-.3px;}
+  .sheet .cnt{font-size:13px;color:var(--blue);font-weight:800;}
+  .sheet .sub{font-size:12.5px;color:var(--sub);margin:0 0 14px;}
+  .driver{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);margin-bottom:10px;transition:.15s;}
+  .driver:active{transform:scale(.99);}
+  .av{width:48px;height:48px;border-radius:13px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .av svg{height:34px;}
+  .di{flex:1;min-width:0;}
+  .di .nm{font-weight:800;font-size:15px;display:flex;align-items:center;gap:7px;}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:var(--blue-soft);color:var(--blue-d);}
+  .di .meta{font-size:12px;color:var(--sub);margin-top:4px;display:flex;gap:11px;flex-wrap:wrap;align-items:center;}
+  .dist{color:var(--ok-d);font-weight:800;}
+  .star{color:#F5A623;font-weight:700;}
+  .call{flex:0 0 auto;background:linear-gradient(135deg,var(--ok),var(--ok-d));color:#fff;border:none;font-weight:800;font-size:13.5px;padding:12px 16px;border-radius:13px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(22,179,100,.28);}
+  .call:active{transform:translateY(1px);}
+  .toggle-share{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;border-radius:14px;background:var(--blue-soft);border:1px solid #D4E2FF;margin-bottom:14px;}
+  .toggle-share .lbl{font-weight:800;font-size:14.5px;color:var(--blue-d);}
+  .toggle-share .lbl small{display:block;font-weight:600;color:var(--sub);font-size:11.5px;margin-top:3px;}
+  .sw{width:54px;height:31px;border-radius:31px;background:#C9D3E0;position:relative;cursor:pointer;flex:0 0 auto;transition:.2s;}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 5px rgba(0,0,0,.2);}
+  .sw.on{background:var(--ok);}
+  .sw.on::after{left:26px;}
+  .reqbox{padding:15px;border-radius:14px;background:#fff;border:1.5px solid var(--blue);margin-bottom:10px;box-shadow:var(--shadow);}
+  .reqbox .rt{font-weight:800;font-size:14.5px;color:var(--blue-d);display:flex;align-items:center;gap:7px;}
+  .reqbox .rm{font-size:12.5px;color:var(--sub);margin-top:6px;line-height:1.5;}
+  .reqbox .ra{display:flex;gap:9px;margin-top:13px;}
+  .reqbox .ra button{flex:1;padding:12px;border-radius:12px;border:none;font-weight:800;font-size:13.5px;cursor:pointer;}
+  .acc{background:linear-gradient(135deg,var(--ok),var(--ok-d));color:#fff;box-shadow:0 4px 12px rgba(22,179,100,.28);}
+  .rej{background:var(--bg2);color:var(--sub);}
+  .empty{text-align:center;color:var(--sub);font-size:13px;padding:26px 0;line-height:1.7;}
+  .spin{display:inline-block;width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .topbtn{margin-left:auto;background:none;border:none;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;}
+  .pin{filter:drop-shadow(0 4px 5px rgba(0,0,0,.3));}
+  .me-ring{width:22px;height:22px;border-radius:50%;background:rgba(46,107,255,.25);border:3px solid var(--blue);box-shadow:0 0 0 5px rgba(46,107,255,.14);}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <!-- 1. 도배/장판 (롤러) -->
+  <g id="g-wall">
+    <rect x="22" y="6" width="36" height="13" rx="2.5" fill="#2E6BFF"/>
+    <rect x="24" y="8.5" width="32" height="8" rx="1.5" fill="#BFD6FF"/>
+    <rect x="38" y="19" width="4" height="9" fill="#37445A"/>
+    <rect x="33" y="28" width="14" height="4" rx="2" fill="#FFC400"/>
+    <rect x="38" y="32" width="4" height="18" fill="#8893A3"/>
+    <rect x="30" y="44" width="20" height="8" rx="2" fill="#FFC400"/>
+    <rect x="32" y="46" width="16" height="4" rx="1" fill="#E0A800"/>
+  </g>
+  <!-- 2. 타일/욕실 (타일 격자 + 흙손) -->
+  <g id="g-tile">
+    <rect x="14" y="10" width="34" height="34" rx="3" fill="#2E6BFF"/>
+    <rect x="17" y="13" width="13" height="13" rx="1.5" fill="#BFD6FF"/>
+    <rect x="32" y="13" width="13" height="13" rx="1.5" fill="#EAF1FF"/>
+    <rect x="17" y="28" width="13" height="13" rx="1.5" fill="#EAF1FF"/>
+    <rect x="32" y="28" width="13" height="13" rx="1.5" fill="#BFD6FF"/>
+    <rect x="44" y="32" width="22" height="9" rx="2" fill="#FFC400" transform="rotate(20 44 32)"/>
+    <rect x="58" y="44" width="5" height="12" rx="2" fill="#37445A" transform="rotate(20 58 44)"/>
+  </g>
+  <!-- 3. 전기/조명 (전구+번개) -->
+  <g id="g-elec">
+    <path d="M40 8 C30 8 24 16 24 25 c0 7 4 11 7 14 l0 5 18 0 0-5 c3-3 7-7 7-14 C56 16 50 8 40 8 Z" fill="#FFC400"/>
+    <path d="M40 14 C33 14 29 19 29 25" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>
+    <rect x="33" y="46" width="14" height="3.5" rx="1.5" fill="#37445A"/>
+    <rect x="35" y="50" width="10" height="3" rx="1.5" fill="#37445A"/>
+    <path d="M42 20 L36 30 L41 30 L38 38 L47 27 L42 27 Z" fill="#2E6BFF"/>
+  </g>
+  <!-- 4. 문/창호/필름 (창문 프레임) -->
+  <g id="g-window">
+    <rect x="16" y="8" width="40" height="44" rx="3" fill="#37445A"/>
+    <rect x="20" y="12" width="32" height="36" rx="2" fill="#2E6BFF"/>
+    <rect x="23" y="15" width="11" height="13" rx="1" fill="#BFD6FF"/>
+    <rect x="38" y="15" width="11" height="13" rx="1" fill="#EAF1FF"/>
+    <rect x="23" y="32" width="11" height="13" rx="1" fill="#EAF1FF"/>
+    <rect x="38" y="32" width="11" height="13" rx="1" fill="#BFD6FF"/>
+    <rect x="34" y="12" width="4" height="36" fill="#37445A"/>
+    <rect x="20" y="28" width="32" height="4" fill="#37445A"/>
+    <rect x="48" y="33" width="3" height="11" rx="1.5" fill="#FFC400"/>
+  </g>
+  <!-- 5. 목공/수납가구 (캐비닛+망치) -->
+  <g id="g-wood">
+    <rect x="16" y="14" width="32" height="38" rx="3" fill="#FFC400"/>
+    <rect x="16" y="14" width="32" height="38" rx="3" fill="none" stroke="#E0A800" stroke-width="2"/>
+    <line x1="32" y1="14" x2="32" y2="52" stroke="#E0A800" stroke-width="2"/>
+    <circle cx="28" cy="33" r="2" fill="#37445A"/><circle cx="36" cy="33" r="2" fill="#37445A"/>
+    <rect x="52" y="10" width="16" height="7" rx="2" fill="#37445A" transform="rotate(35 52 10)"/>
+    <rect x="54" y="16" width="5" height="22" rx="2" fill="#8893A3" transform="rotate(35 54 16)"/>
+  </g>
+  <g id="g-client">
+    <rect x="20" y="12" width="32" height="40" rx="4" fill="#2E6BFF"/>
+    <rect x="24" y="16" width="24" height="32" rx="2" fill="#fff"/>
+    <rect x="28" y="8" width="16" height="8" rx="2" fill="#1B4FD6"/>
+    <rect x="28" y="24" width="16" height="2.6" rx="1.3" fill="#BFD6FF"/>
+    <rect x="28" y="30" width="16" height="2.6" rx="1.3" fill="#BFD6FF"/>
+    <rect x="28" y="36" width="10" height="2.6" rx="1.3" fill="#BFD6FF"/>
+  </g>
+</defs></svg>
+
+<header>
+  <div class="logo">
+    <span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="#fff"/><circle cx="12" cy="9" r="2.6" fill="#2E6BFF"/></svg></span>
+    현장콜 <small>BETA</small>
+  </div>
+  <span class="demo-flag" id="demoFlag">DEMO</span>
+  <button class="homeBtn" id="homeBtn" onclick="goHome()" style="display:none;">✕ 닫기</button>
+</header>
+
+<section class="screen active" id="login">
+  <div class="hero-art">
+    <div class="grid"></div>
+    <div class="machines">
+      <svg viewBox="0 0 80 56"><use href="#g-wall"/></svg>
+      <svg viewBox="0 0 80 56"><use href="#g-tile"/></svg>
+      <svg viewBox="0 0 80 56"><use href="#g-elec"/></svg>
+      <svg viewBox="0 0 80 56"><use href="#g-wood"/></svg>
+    </div>
+  </div>
+  <div class="hero">필요한 <b>기사</b>,<br>가까운 <b>현장</b>과 바로 연결</div>
+  <div class="hero-sub">도배·타일·전기·창호·목공 — 휴대폰 번호만으로<br>현장 근처 시공 기사를 위치 기반으로 바로 연결합니다.</div>
+  <label class="fld">휴대폰 번호</label>
+  <input type="tel" id="phone" inputmode="numeric" placeholder="010-0000-0000" maxlength="13" autocomplete="off">
+  <div class="role-row">
+    <div class="role" data-role="driver" onclick="pickRole(this,'driver')">
+      <div class="ic"><svg viewBox="0 0 80 56"><use href="#g-wall"/></svg></div>
+      <div class="t">기사님</div>
+    </div>
+    <div class="role" data-role="client" onclick="pickRole(this,'client')">
+      <div class="ic"><svg viewBox="0 0 72 60"><use href="#g-client"/></svg></div>
+      <div class="t">현장</div>
+    </div>
+  </div>
+  <button class="btn btn-start" id="startBtn" disabled onclick="enter()">시작하기</button>
+  <div class="note">데모 모드입니다 · 실제 가입·인증 없이<br>위치 매칭 흐름을 미리 체험합니다.</div>
+  <div id="logoutRow" style="display:none;text-align:center;margin-top:14px;">
+    <button onclick="logout()" style="background:none;border:none;color:var(--sub);font-size:13px;text-decoration:underline;cursor:pointer;">다른 번호로 등록 (등록 해제)</button>
+  </div>
+</section>
+
+<section class="screen" id="equip">
+  <div class="hero" style="font-size:23px;">어떤 시공을<br>하시나요?</div>
+  <div class="hero-sub">선택한 전문 분야로 주변 현장에 노출됩니다.</div>
+  <div class="equip-row">
+    <div class="equip" onclick="pickEquip(this,'도배·장판','g-wall')"><div class="ic"><svg viewBox="0 0 80 56"><use href="#g-wall"/></svg></div><div class="t">도배·장판</div></div>
+    <div class="equip" onclick="pickEquip(this,'타일·욕실','g-tile')"><div class="ic"><svg viewBox="0 0 80 56"><use href="#g-tile"/></svg></div><div class="t">타일·욕실</div></div>
+    <div class="equip" onclick="pickEquip(this,'전기·조명','g-elec')"><div class="ic"><svg viewBox="0 0 80 56"><use href="#g-elec"/></svg></div><div class="t">전기·조명</div></div>
+    <div class="equip" onclick="pickEquip(this,'창호·필름','g-window')"><div class="ic"><svg viewBox="0 0 80 56"><use href="#g-window"/></svg></div><div class="t">창호·필름</div></div>
+    <div class="equip" style="grid-column:1 / -1;" onclick="pickEquip(this,'목공·가구','g-wood')"><div class="ic"><svg viewBox="0 0 80 56"><use href="#g-wood"/></svg></div><div class="t">목공·가구</div></div>
+  </div>
+  <button class="btn" id="equipBtn" disabled onclick="startDriver()">위치 공유 시작</button>
+  <button class="btn ghost" onclick="back('login')">뒤로</button>
+</section>
+
+<section class="screen" id="mapScreen">
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="status-pill"><span class="live-dot"></span><span id="statusTxt">위치 확인 중…</span></div>
+    <div class="recenter" onclick="recenter()">◎</div>
+  </div>
+  <div class="sheet" id="clientSheet" style="display:none;">
+    <div class="grab"></div>
+    <h3>주변 기사 <span class="cnt" id="dCount">0명</span><button class="topbtn" onclick="rescan()">↻ 새로고침</button></h3>
+    <p class="sub">가까운 순으로 표시됩니다. 통화 버튼으로 바로 연결하세요.</p>
+    <div id="driverList"></div>
+  </div>
+  <div class="sheet" id="driverSheet" style="display:none;">
+    <div class="grab"></div>
+    <div class="toggle-share">
+      <div class="lbl">위치 공유<small id="shareSub">현장에 내 위치를 노출합니다</small></div>
+      <div class="sw on" id="shareSw" onclick="toggleShare()"></div>
+    </div>
+    <h3>들어온 호출 <span class="cnt" id="reqCount">대기 중</span></h3>
+    <div id="reqList"><div class="empty">근처 현장의 호출을 기다리는 중…<br><span class="spin"></span></div></div>
+  </div>
+</section>
+
+<script>
+const S={role:null,phone:null,equip:null,equipIcon:null,me:null,map:null,meMarker:null,driverMarkers:[],drivers:[],sharing:true,watchId:null};
+const phoneEl=document.getElementById('phone');
+phoneEl.addEventListener('input',e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,11);
+  if(v.length<4)e.target.value=v;else if(v.length<8)e.target.value=v.slice(0,3)+'-'+v.slice(3);
+  else e.target.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7);
+  validate();
+});
+function pickRole(el,r){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');S.role=r;validate();}
+function validate(){document.getElementById('startBtn').disabled=!(phoneEl.value.replace(/\D/g,'').length>=10&&S.role);}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('homeBtn').style.display=id==='login'?'none':'inline-block';}
+function back(id){show(id);}
+function goHome(){
+  if(!confirm('위치 공유를 멈추고 홈으로 갈까요?\n등록 정보는 유지되어 다음에 자동 로그인됩니다.'))return;
+  if(S.watchId!=null&&navigator.geolocation){navigator.geolocation.clearWatch(S.watchId);S.watchId=null;}
+  S.driverMarkers.forEach(m=>{try{S.map.removeLayer(m);}catch(e){}});S.driverMarkers=[];S.drivers=[];
+  // 등록 정보는 유지(자동로그인용). 입력칸만 저장된 번호로 채워둠
+  let d=null;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null');}catch(e){}
+  if(d){phoneEl.value=d.phone||'';if(d.role){document.querySelectorAll('.role').forEach(x=>x.classList.toggle('sel',x.dataset.role===d.role));}S.role=d.role;}
+  validate();
+  show('login');
+}
+/* 등록 해제(로그아웃) */
+function logout(){
+  if(!confirm('등록을 해제할까요?\n다음에 다시 휴대폰 번호를 입력해야 합니다.'))return;
+  clearLogin();
+  S.role=null;S.equip=null;S.equipIcon=null;S.sharing=true;
+  document.querySelectorAll('.role,.equip').forEach(x=>x.classList.remove('sel'));
+  document.getElementById('equipBtn').disabled=true;document.getElementById('startBtn').disabled=true;
+  phoneEl.value='';validate();show('login');
+}
+function enter(){
+  S.phone=phoneEl.value;
+  if(S.role==='driver')show('equip');
+  else{S.equip=null;saveLogin();goMap();}
+}
+/* ── 자동 로그인 저장/복원 ── */
+const LS_KEY='jangbicall_login';
+function saveLogin(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify({phone:S.phone,role:S.role,equip:S.equip,equipIcon:S.equipIcon}));}catch(e){}
+}
+function clearLogin(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
+function autoLogin(){
+  let d=null;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null');}catch(e){}
+  if(!d||!d.phone||!d.role)return false;
+  S.phone=d.phone;S.role=d.role;S.equip=d.equip||null;S.equipIcon=d.equipIcon||null;S.sharing=true;
+  goMap();
+  return true;
+}
+function pickEquip(el,name,icon){document.querySelectorAll('.equip').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');S.equip=name;S.equipIcon=icon;document.getElementById('equipBtn').disabled=false;}
+function startDriver(){saveLogin();goMap();}
+function svgPin(useId,size){return `<div class="pin"><svg viewBox="0 0 80 56" style="height:${size||38}px"><use href="#${useId}"/></svg></div>`;}
+function goMap(){show('mapScreen');document.getElementById('clientSheet').style.display=S.role==='client'?'block':'none';document.getElementById('driverSheet').style.display=S.role==='driver'?'block':'none';setTimeout(initMap,60);}
+function initMap(){
+  if(S.map){locate();return;}
+  S.map=L.map('map',{zoomControl:false,attributionControl:false}).setView([37.2410,127.1776],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(S.map);
+  L.control.attribution({prefix:false,position:'bottomleft'}).addAttribution('© OpenStreetMap').addTo(S.map);
+  syncSheetHeight();locate();
+}
+function setStatus(t){document.getElementById('statusTxt').innerHTML=t;}
+function locate(){setStatus('위치 확인 중…');if(!navigator.geolocation){onLoc(37.2410,127.1776,true);return;}
+  navigator.geolocation.getCurrentPosition(p=>onLoc(p.coords.latitude,p.coords.longitude,false),()=>onLoc(37.2410,127.1776,true),{enableHighAccuracy:true,timeout:8000});}
+function onLoc(lat,lng,fallback){
+  S.me={lat,lng};S.map.setView([lat,lng],15);
+  const ic=S.role==='driver'?L.divIcon({className:'',html:svgPin(S.equipIcon||'g-wall',36),iconSize:[40,32],iconAnchor:[20,28]}):L.divIcon({className:'',html:`<div class="me-ring"></div>`,iconSize:[22,22],iconAnchor:[11,11]});
+  if(S.meMarker)S.meMarker.setLatLng([lat,lng]);else S.meMarker=L.marker([lat,lng],{icon:ic,zIndexOffset:1000}).addTo(S.map);
+  setStatus(`<b style="color:var(--ok)">실시간</b> · ${fallback?'데모 위치(용인)':'내 위치'} 공유 중`);
+  if(S.role==='client')spawnDrivers();else startDriverMode();
+}
+function recenter(){if(S.me)S.map.setView([S.me.lat,S.me.lng],15);}
+function dist(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+function fmtDist(km){return km<1?Math.round(km*1000)+'m':km.toFixed(1)+'km';}
+const NAMES=['김','이','박','최','정','강','조','윤','장','임'];
+const EQUIPS=[['도배·장판','g-wall'],['타일·욕실','g-tile'],['전기·조명','g-elec'],['창호·필름','g-window'],['목공·가구','g-wood']];
+function rnd(a,b){return a+Math.random()*(b-a);}
+function spawnDrivers(){
+  S.driverMarkers.forEach(m=>S.map.removeLayer(m));S.driverMarkers=[];S.drivers=[];
+  const n=4+Math.floor(Math.random()*3);
+  for(let i=0;i<n;i++){
+    const off=()=>rnd(-0.018,0.018);const lat=S.me.lat+off(),lng=S.me.lng+off();
+    const[eq,ic]=EQUIPS[Math.floor(Math.random()*EQUIPS.length)];
+    const d={id:i,name:NAMES[Math.floor(Math.random()*NAMES.length)]+'기사',equip:eq,icon:ic,lat,lng,phone:'010'+Math.floor(rnd(10000000,99999999)),rating:(4+Math.random()).toFixed(1),km:dist(S.me,{lat,lng})};
+    S.drivers.push(d);
+    const mk=L.marker([lat,lng],{icon:L.divIcon({className:'',html:svgPin(ic,34),iconSize:[38,30],iconAnchor:[19,26]})}).addTo(S.map);
+    mk.on('click',()=>S.map.setView([lat,lng],16));S.driverMarkers.push(mk);
+  }
+  S.drivers.sort((a,b)=>a.km-b.km);renderDrivers();
+}
+function renderDrivers(){
+  document.getElementById('dCount').textContent=S.drivers.length+'명';
+  const wrap=document.getElementById('driverList');
+  if(!S.drivers.length){wrap.innerHTML='<div class="empty">주변에 시공 가능한 기사가 없습니다.<br>잠시 후 새로고침해 주세요.</div>';return;}
+  wrap.innerHTML=S.drivers.map(d=>`<div class="driver"><div class="av"><svg viewBox="0 0 80 56"><use href="#${d.icon}"/></svg></div><div class="di"><div class="nm">${d.name}<span class="badge">${d.equip}</span></div><div class="meta"><span class="dist">${fmtDist(d.km)}</span><span class="star">★ ${d.rating}</span><span>즉시 시공</span></div></div><button class="call" onclick="callDriver('${d.phone}','${d.name}')">📞 통화</button></div>`).join('');
+}
+function rescan(){document.getElementById('driverList').innerHTML='<div class="empty"><span class="spin"></span> 주변 기사 검색 중…</div>';setTimeout(spawnDrivers,700);}
+function callDriver(phone,name){if(confirm(`${name}님에게 전화 연결할까요?\n${phone.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3')}\n\n(데모 — 실제 발신되지 않습니다)`))location.href='tel:'+phone;}
+function startDriverMode(){setTimeout(incomingRequest,3500);}
+function incomingRequest(){if(!S.sharing)return;const km=rnd(0.3,2.5);
+  document.getElementById('reqCount').textContent='호출 1건!';
+  document.getElementById('reqList').innerHTML=`<div class="reqbox"><div class="rt">📋 새 호출 · ${S.equip} 요청</div><div class="rm">현장에서 <b style="color:var(--ok-d)">${fmtDist(km)}</b> 거리에서 ${S.equip} 시공을 요청했습니다.<br>예상 작업: 시공 / 즉시</div><div class="ra"><button class="acc" onclick="acceptReq()">수락 · 통화</button><button class="rej" onclick="rejectReq()">거절</button></div></div>`;}
+function acceptReq(){
+  document.getElementById('reqCount').textContent='연결됨';
+  document.getElementById('reqList').innerHTML='<div class="empty" style="color:var(--ok-d)">✓ 현장과 연결되었습니다.<br>통화로 작업 내용을 확정하세요.</div>';
+  if(confirm('현장에 전화 연결할까요?\n(데모 — 실제 발신되지 않습니다)'))location.href='tel:01000000000';
+  setTimeout(()=>{document.getElementById('reqCount').textContent='대기 중';document.getElementById('reqList').innerHTML='<div class="empty">다음 호출을 기다리는 중…<br><span class="spin"></span></div>';setTimeout(incomingRequest,6000);},4000);
+}
+function rejectReq(){document.getElementById('reqCount').textContent='대기 중';document.getElementById('reqList').innerHTML='<div class="empty">다음 호출을 기다리는 중…<br><span class="spin"></span></div>';setTimeout(incomingRequest,6000);}
+function toggleShare(){
+  S.sharing=!S.sharing;document.getElementById('shareSw').classList.toggle('on',S.sharing);
+  document.getElementById('shareSub').textContent=S.sharing?'현장에 내 위치를 노출합니다':'위치 공유가 꺼져 호출을 받지 않습니다';
+  if(S.meMarker)S.meMarker.setOpacity(S.sharing?1:.35);
+  if(S.sharing){document.getElementById('reqCount').textContent='대기 중';document.getElementById('reqList').innerHTML='<div class="empty">다음 호출을 기다리는 중…<br><span class="spin"></span></div>';setTimeout(incomingRequest,4000);}
+  else{document.getElementById('reqCount').textContent='꺼짐';document.getElementById('reqList').innerHTML='<div class="empty">위치 공유가 꺼져 있습니다.<br>다시 켜면 호출을 받습니다.</div>';}
+}
+function syncSheetHeight(){const sh=S.role==='client'?document.getElementById('clientSheet'):document.getElementById('driverSheet');document.documentElement.style.setProperty('--sheet-h',(sh?sh.offsetHeight:200)+'px');}
+window.addEventListener('resize',()=>{if(S.map)S.map.invalidateSize();syncSheetHeight();});
+
+/* ── 시작 시 자동 로그인 ── */
+(function init(){
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_KEY)||'null');}catch(e){}
+  if(saved&&saved.phone){
+    document.getElementById('logoutRow').style.display='block';
+    autoLogin(); // 저장된 등록정보로 바로 지도 진입 + 위치공유 시작
+  }
+})();
+</script>
+</body>
+</html>
